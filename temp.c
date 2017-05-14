@@ -43,6 +43,8 @@ void SortByRemain(PROCESS **head, PROCESS **tail);
 void CopyNode(PROCESS *node, PROCESS *new);
 void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail);
 
+void FCFS();
+
 /*--- function definition ---*/
 void Menu() {
 
@@ -108,7 +110,7 @@ void CreateProcess() {
 	head = NULL, tail = NULL;
 	PROCESS *node;
 
-	srand(time(NULL));
+	//srand(time(NULL));
 
 	printf("+----------------------------------------------------------------+\n");
 	printf("|                         ProcessCreation                        |\n");
@@ -362,7 +364,21 @@ void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail) {
 	}
 
 }
+/*
+void Init(PROCESS **head, PROCESS **tail) {
 
+	int i;
+
+	for(i = 0;i < processNum; i++) {
+			head->RemainTime = head->CPUburstTime;
+		head->WaitingTime = 0;
+		head->ExecutingTime = 0;
+		head->Turnaround = 0;
+		head = head->Next;
+	}
+
+}
+*/
 void FCFS() {
 
 	/* Process Queue */
@@ -380,7 +396,7 @@ void FCFS() {
 	CopyQueue(&processQueue, &processHead, &processTail);
 
 	printf("********************* FCFS Scheduling Report *********************\n\n");
-	printf("                            Gantt Chart                           \n");
+	printf("                            Gantt Chart                           \n\n");
 
 	while(endNum != processNum) {
 
@@ -405,47 +421,52 @@ void FCFS() {
 		}
 
 		readyNode = readyHead;
+
 		while(readyNode != NULL) {
 
 			/* cpu state is idle */
 			if(CPUstate == IDLE) {
-				printf("%d",readyNode->ProcessID);
+				printf("%d : CPUscheduling %d\n", time, readyNode->ProcessID);
+				//printf("%d",readyNode->ProcessID);
 				CPUstate = readyNode->ProcessID;
-				readyNode->ExecutingTime++;
-				readyNode->RemainTime--;
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
-					printf("%d",readyNode->ProcessID);
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
 					endNum++;
 					CPUstate = SCHEDULE;
-				}
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
 			}
 
 			/* current executing process */
 			else if(CPUstate == readyNode->ProcessID) {
-				printf("-");
-				readyNode->ExecutingTime++;
-				readyNode->RemainTime--;
+				printf("%d : executing\n", time);
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
-					printf("-");
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
 					endNum++;
 					CPUstate = SCHEDULE;
-				}
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
 			}
 
 			/* waiting process */
 			else {
 				readyNode->WaitingTime++;
 			}
+
 			readyNode = readyNode->Next;
 		}
 		time++;
 	}
 	CopyNode(readyHead, node);
 	Enqueue(node, &endHead, &endTail);
+	printf("\n");
+
+	PrintProcess(&endHead);
+
 }
 
 int main(void) {
@@ -458,6 +479,7 @@ int main(void) {
 	temp = head;
 	PrintProcess(&temp);
 	FCFS();
+	
 	return 0;
 
 }
