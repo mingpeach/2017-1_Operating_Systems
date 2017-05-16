@@ -106,9 +106,13 @@ void Select(int select) {
 void CreateProcess() {
 
 	int i;
+	long seed;
 
 	head = NULL, tail = NULL;
 	PROCESS *node;
+
+	seed = time(NULL);
+    srand(seed);
 
 	//srand(time(NULL));
 
@@ -364,13 +368,14 @@ void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail) {
 	}
 
 }
+
 /*
 void Init(PROCESS **head, PROCESS **tail) {
 
 	int i;
 
 	for(i = 0;i < processNum; i++) {
-			head->RemainTime = head->CPUburstTime;
+		head->RemainTime = head->CPUburstTime;
 		head->WaitingTime = 0;
 		head->ExecutingTime = 0;
 		head->Turnaround = 0;
@@ -379,7 +384,10 @@ void Init(PROCESS **head, PROCESS **tail) {
 
 }
 */
+
 void FCFS() {
+
+	SortByArrival(&head, &tail);
 
 	/* Process Queue */
 	PROCESS *processHead = NULL, *processTail = NULL;
@@ -395,10 +403,12 @@ void FCFS() {
 	/* Copy ProcessQueue */
 	CopyQueue(&processQueue, &processHead, &processTail);
 
-	printf("********************* FCFS Scheduling Report *********************\n\n");
-	printf("                            Gantt Chart                           \n\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("|                     FCFS Scheduling Report                     |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");
 
-	while(endNum != processNum) {
+	while(endNum < processNum) {
 
 		processQueue = processHead;
 
@@ -408,27 +418,30 @@ void FCFS() {
 			CopyNode(processQueue, node);
 			Enqueue(node, &readyHead, &readyTail);
 
-			processQueue = processQueue->Next;
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
 			processHead = processHead->Next;
 		}
 
-		/* CPU Scheduling */
+		/* remove end process from readyqueue and make CPU idle */
 		if(CPUstate == SCHEDULE) {
 			CPUstate = IDLE;
+			node = (PROCESS *)malloc(sizeof(PROCESS));
 			CopyNode(readyHead, node);
 			Enqueue(node, &endHead, &endTail);
-			readyHead = readyHead->Next;
+			/* remove end process from ready queue */
+			readyHead = readyHead->Next; 
 		}
 
+		/* CPU Scheduling */
 		readyNode = readyHead;
-
 		while(readyNode != NULL) {
 
-			/* cpu state is idle */
-			if(CPUstate == IDLE) {
-				printf("%d : CPUscheduling %d\n", time, readyNode->ProcessID);
-				//printf("%d",readyNode->ProcessID);
-				CPUstate = readyNode->ProcessID;
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				printf("-");
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
@@ -439,9 +452,10 @@ void FCFS() {
 				readyNode->RemainTime--;
 			}
 
-			/* current executing process */
-			else if(CPUstate == readyNode->ProcessID) {
-				printf("%d : executing\n", time);
+			/* cpu state is idle */
+			else if(CPUstate == IDLE) {
+				printf("%d",readyNode->ProcessID);
+				CPUstate = readyNode->ProcessID;
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
@@ -459,23 +473,38 @@ void FCFS() {
 
 			readyNode = readyNode->Next;
 		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
 		time++;
 	}
+
+	node = (PROCESS *)malloc(sizeof(PROCESS));
 	CopyNode(readyHead, node);
 	Enqueue(node, &endHead, &endTail);
-	printf("\n");
+	printf("\n\n");
 
+	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
 
 }
+
+
+
+
+
+
+
+
+
 
 int main(void) {
 
 	PROCESS *temp;
 	CreateProcess();
-	temp = head;
-	PrintProcess(&temp);
-	SortByArrival(&head, &tail);
+	
 	temp = head;
 	PrintProcess(&temp);
 	FCFS();
