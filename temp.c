@@ -25,6 +25,11 @@ PROCESS *readyHead = NULL, *readyTail = NULL;
 PROCESS *endHead = NULL, *endTail = NULL;
 int processNum, CPUstate;
 
+double FCFSwaiting = 0, FCFSturnaround = 0, NPSJFwaiting = 0, NPSJFturnaround = 0,
+		NPPwaiting = 0, NPPturnaround = 0, PSJFwaiting = 0, PSJFturnaround = 0,
+		PPwaiting = 0, PPturnaround = 0, NPRRwaiting = 0, NPRRturnaround = 0,
+		PRRwaiting = 0, PRRturnaround = 0;
+
 /*--- function declaration ---*/
 void CreateProcess();
 void Enqueue(PROCESS *node, PROCESS **head, PROCESS **tail);
@@ -44,6 +49,11 @@ void CopyNode(PROCESS *node, PROCESS *new);
 void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail);
 
 void FCFS();
+void NPSJF();
+void NPPriority();
+
+void PSJF();
+void PPriority();
 
 /*--- function definition ---*/
 void Menu() {
@@ -369,22 +379,6 @@ void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail) {
 
 }
 
-/*
-void Init(PROCESS **head, PROCESS **tail) {
-
-	int i;
-
-	for(i = 0;i < processNum; i++) {
-		head->RemainTime = head->CPUburstTime;
-		head->WaitingTime = 0;
-		head->ExecutingTime = 0;
-		head->Turnaround = 0;
-		head = head->Next;
-	}
-
-}
-*/
-
 void FCFS() {
 
 	SortByArrival(&head, &tail);
@@ -445,6 +439,8 @@ void FCFS() {
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					FCFSwaiting += readyNode->WaitingTime;
+					FCFSturnaround += readyNode->Turnaround;
 					endNum++;
 					CPUstate = SCHEDULE;
 				}				
@@ -459,6 +455,432 @@ void FCFS() {
 				/* end of execute */
 				if(readyNode->RemainTime == 1) {
 					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					FCFSwaiting += readyNode->WaitingTime;
+					FCFSturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* waiting process */
+			else {
+				readyNode->WaitingTime++;
+			}
+
+			readyNode = readyNode->Next;
+		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
+		time++;
+	}
+
+	node = (PROCESS *)malloc(sizeof(PROCESS));
+	CopyNode(readyHead, node);
+	Enqueue(node, &endHead, &endTail);
+	printf("\n\n");
+
+	printf("**************************** Result ******************************\n\n");
+	PrintProcess(&endHead);
+
+}
+
+void NPSJF() {
+
+	SortByArrival(&head, &tail);
+
+	/* Process Queue */
+	PROCESS *processHead = NULL, *processTail = NULL;
+	PROCESS *processQueue = head, *node, *readyNode;
+
+	int time = 0, endNum = 0;
+	CPUstate = IDLE;
+
+	/* Initialize ReadyQueue */
+	readyHead = NULL;
+	readyTail = NULL;
+
+	/* Copy ProcessQueue */
+	CopyQueue(&processQueue, &processHead, &processTail);
+
+	printf("+----------------------------------------------------------------+\n");
+	printf("|              Non-Preemptive SJF Scheduling Report              |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");
+
+	while(endNum < processNum) {
+
+		processQueue = processHead;
+
+		/*  Insert ReadyQueue - Job Scheduling */
+		while(processQueue != NULL && processQueue->ArrivalTime == time) {
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(processQueue, node);
+			Enqueue(node, &readyHead, &readyTail);
+
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
+			processHead = processHead->Next;
+		}
+
+		/* remove end process from readyqueue and make CPU idle */
+		if(CPUstate == SCHEDULE) {
+			CPUstate = IDLE;
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(readyHead, node);
+			Enqueue(node, &endHead, &endTail);
+			/* remove end process from ready queue */
+			readyHead = readyHead->Next; 
+			if(readyHead != NULL)
+				SortByBurst(&readyHead, &readyTail);
+		}
+
+		/* CPU Scheduling */
+		readyNode = readyHead;
+		while(readyNode != NULL) {
+
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				printf("-");
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					NPSJFwaiting += readyNode->WaitingTime;
+					NPSJFturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* cpu state is idle */
+			else if(CPUstate == IDLE) {
+				printf("%d",readyNode->ProcessID);
+				CPUstate = readyNode->ProcessID;
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					NPSJFwaiting += readyNode->WaitingTime;
+					NPSJFturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* waiting process */
+			else {
+				readyNode->WaitingTime++;
+			}
+
+			readyNode = readyNode->Next;
+		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
+		time++;
+	}
+
+	node = (PROCESS *)malloc(sizeof(PROCESS));
+	CopyNode(readyHead, node);
+	Enqueue(node, &endHead, &endTail);
+	printf("\n\n");
+
+	printf("**************************** Result ******************************\n\n");
+	PrintProcess(&endHead);
+
+}
+
+void NPPriority() {
+
+	SortByArrival(&head, &tail);
+
+	/* Process Queue */
+	PROCESS *processHead = NULL, *processTail = NULL;
+	PROCESS *processQueue = head, *node, *readyNode;
+
+	int time = 0, endNum = 0;
+	CPUstate = IDLE;
+
+	/* Initialize ReadyQueue */
+	readyHead = NULL;
+	readyTail = NULL;
+
+	/* Copy ProcessQueue */
+	CopyQueue(&processQueue, &processHead, &processTail);
+
+	printf("+----------------------------------------------------------------+\n");
+	printf("|           Non-Preemptive Pritority Scheduling Report           |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");
+
+	while(endNum < processNum) {
+
+		processQueue = processHead;
+
+		/*  Insert ReadyQueue - Job Scheduling */
+		while(processQueue != NULL && processQueue->ArrivalTime == time) {
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(processQueue, node);
+			Enqueue(node, &readyHead, &readyTail);
+
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
+			processHead = processHead->Next;
+		}
+
+		/* remove end process from readyqueue and make CPU idle */
+		if(CPUstate == SCHEDULE) {
+			CPUstate = IDLE;
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(readyHead, node);
+			Enqueue(node, &endHead, &endTail);
+			/* remove end process from ready queue */
+			readyHead = readyHead->Next; 
+			if(readyHead != NULL)
+				SortByPriority(&readyHead, &readyTail);
+		}
+
+		/* CPU Scheduling */
+		readyNode = readyHead;
+		while(readyNode != NULL) {
+
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				printf("-");
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					NPPwaiting += readyNode->WaitingTime;
+					NPPturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* cpu state is idle */
+			else if(CPUstate == IDLE) {
+				printf("%d",readyNode->ProcessID);
+				CPUstate = readyNode->ProcessID;
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					NPPwaiting += readyNode->WaitingTime;
+					NPPturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* waiting process */
+			else {
+				readyNode->WaitingTime++;
+			}
+
+			readyNode = readyNode->Next;
+		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
+		time++;
+	}
+
+	node = (PROCESS *)malloc(sizeof(PROCESS));
+	CopyNode(readyHead, node);
+	Enqueue(node, &endHead, &endTail);
+	printf("\n\n");
+
+	printf("**************************** Result ******************************\n\n");
+	PrintProcess(&endHead);
+
+}
+
+void PSJF() {
+
+	SortByArrival(&head, &tail);
+
+	/* Process Queue */
+	PROCESS *processHead = NULL, *processTail = NULL;
+	PROCESS *processQueue = head, *node, *readyNode;
+
+	int time = 0, endNum = 0;
+	CPUstate = IDLE;
+
+	/* Initialize ReadyQueue */
+	readyHead = NULL;
+	readyTail = NULL;
+
+	/* Copy ProcessQueue */
+	CopyQueue(&processQueue, &processHead, &processTail);
+
+	printf("+----------------------------------------------------------------+\n");
+	printf("|                Preemptive SJF Scheduling Report                |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");
+
+	while(endNum < processNum) {
+
+		processQueue = processHead;
+
+		/*  Insert ReadyQueue - Job Scheduling */
+		while(processQueue != NULL && processQueue->ArrivalTime == time) {
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(processQueue, node);
+			Enqueue(node, &readyHead, &readyTail);
+
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
+			processHead = processHead->Next;
+		}
+
+		/* remove end process from readyqueue and make CPU idle */
+		if(CPUstate == SCHEDULE) {
+			CPUstate = IDLE;
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(readyHead, node);
+			Enqueue(node, &endHead, &endTail);
+			/* remove end process from ready queue */
+			readyHead = readyHead->Next; 
+		}
+
+		/* sort by remain time */
+		if(readyHead != NULL) {
+			SortByRemain(&readyHead, &readyTail);
+			CPUstate = readyHead->ProcessID;
+			printf("%d", readyHead->ProcessID);
+		}
+
+		/* CPU Scheduling */
+		readyNode = readyHead;
+		while(readyNode != NULL) {
+
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					PSJFwaiting += readyNode->WaitingTime;
+					PSJFturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+			}
+
+			/* waiting process */
+			else {
+				readyNode->WaitingTime++;
+			}
+
+			readyNode = readyNode->Next;
+		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
+		time++;
+	}
+
+	node = (PROCESS *)malloc(sizeof(PROCESS));
+	CopyNode(readyHead, node);
+	Enqueue(node, &endHead, &endTail);
+	printf("\n\n");
+
+	printf("**************************** Result ******************************\n\n");
+	PrintProcess(&endHead);
+
+}
+
+void PPriority() {
+
+	SortByArrival(&head, &tail);
+
+	/* Process Queue */
+	PROCESS *processHead = NULL, *processTail = NULL;
+	PROCESS *processQueue = head, *node, *readyNode;
+
+	int time = 0, endNum = 0;
+	CPUstate = IDLE;
+
+	/* Initialize ReadyQueue */
+	readyHead = NULL;
+	readyTail = NULL;
+
+	/* Copy ProcessQueue */
+	CopyQueue(&processQueue, &processHead, &processTail);
+
+	printf("+----------------------------------------------------------------+\n");
+	printf("|             Preemptive Priority Scheduling Report              |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");
+
+	while(endNum < processNum) {
+
+		processQueue = processHead;
+
+		/*  Insert ReadyQueue - Job Scheduling */
+		while(processQueue != NULL && processQueue->ArrivalTime == time) {
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(processQueue, node);
+			Enqueue(node, &readyHead, &readyTail);
+
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
+			processHead = processHead->Next;
+		}
+
+		/* remove end process from readyqueue and make CPU idle */
+		if(CPUstate == SCHEDULE) {
+			CPUstate = IDLE;
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(readyHead, node);
+			Enqueue(node, &endHead, &endTail);
+			/* remove end process from ready queue */
+			readyHead = readyHead->Next; 
+		}
+
+		/* sort by priority */
+		if(readyHead != NULL) {
+			SortByPriority(&readyHead, &readyTail);
+			CPUstate = readyHead->ProcessID;
+			printf("%d", readyHead->ProcessID);
+		}
+
+		/* CPU Scheduling */
+		readyNode = readyHead;
+		while(readyNode != NULL) {
+
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					PPwaiting += readyNode->WaitingTime;
+					PPturnaround += readyNode->Turnaround;
 					endNum++;
 					CPUstate = SCHEDULE;
 				}				
@@ -492,14 +914,6 @@ void FCFS() {
 }
 
 
-
-
-
-
-
-
-
-
 int main(void) {
 
 	PROCESS *temp;
@@ -507,7 +921,7 @@ int main(void) {
 	
 	temp = head;
 	PrintProcess(&temp);
-	FCFS();
+	PSJF();
 	
 	return 0;
 
