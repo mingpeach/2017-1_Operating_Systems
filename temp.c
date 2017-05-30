@@ -23,12 +23,11 @@ typedef struct process {
 PROCESS *head = NULL, *tail = NULL;
 PROCESS *readyHead = NULL, *readyTail = NULL;
 PROCESS *endHead = NULL, *endTail = NULL;
-int processNum, CPUstate;
+int processNum, CPUstate, quantum;
 
 double FCFSwaiting = 0, FCFSturnaround = 0, NPSJFwaiting = 0, NPSJFturnaround = 0,
 		NPPwaiting = 0, NPPturnaround = 0, PSJFwaiting = 0, PSJFturnaround = 0,
-		PPwaiting = 0, PPturnaround = 0, NPRRwaiting = 0, NPRRturnaround = 0,
-		PRRwaiting = 0, PRRturnaround = 0;
+		PPwaiting = 0, PPturnaround = 0, RRwaiting = 0, RRturnaround = 0;
 
 /*--- function declaration ---*/
 void CreateProcess();
@@ -54,6 +53,10 @@ void NPPriority();
 
 void PSJF();
 void PPriority();
+void RR();
+
+void InitEval();
+void PrintEval();
 
 /*--- function definition ---*/
 void Menu() {
@@ -83,25 +86,30 @@ void Select(int select) {
 
 	switch(select) {
 		case 1: 
-			//FCFS
+			FCFS();		
 			break;
 		case 2:
-			//NPSJF
+			NPSJF();
 			break;
 		case 3:
-			//PSJF
+			PSJF();
 			break;
 		case 4:
-			//NPPriority
+			NPPriority();
 			break;
 		case 5:
-			//PPriority
+			PPriority();
 			break;
 		case 6:
-			//RR
+			RR();
 			break;
 		case 7:
-			//Evaluation
+			FCFS();
+			NPSJF();
+			PSJF();
+			NPPriority();
+			PPriority();
+			RR();
 			break;
 		case 8:
 			//Exit
@@ -124,8 +132,6 @@ void CreateProcess() {
 	seed = time(NULL);
     srand(seed);
 
-	//srand(time(NULL));
-
 	printf("+----------------------------------------------------------------+\n");
 	printf("|                         ProcessCreation                        |\n");
 	printf("+----------------------------------------------------------------+\n");
@@ -147,6 +153,9 @@ void CreateProcess() {
 		Enqueue(node, &head, &tail);
 	}
 
+	PROCESS *temp;
+	temp = head;
+	PrintProcess(&temp);
 }
 
 void Enqueue(PROCESS *node, PROCESS **head, PROCESS **tail) {
@@ -287,7 +296,7 @@ void SortByPriority(PROCESS **head, PROCESS **tail) {
 
 		while(END!=stail) {
 
-			if(MID->Priority > END->Priority) {
+			if(MID->Priority < END->Priority) {
 				FRONT->Next = END;
 				MID->Next = END->Next;
 				END->Next = MID;
@@ -376,6 +385,22 @@ void CopyQueue(PROCESS **queue, PROCESS **head, PROCESS **tail) {
 		CopyNode(*queue, node);
 		Enqueue(node, head, tail);
 	}
+
+}
+/*
+void InitEval() {
+	FCFSwaiting = 0; FCFSturnaround = 0;
+	NPSJFwaiting = 0; NPSJFturnaround = 0;
+	NPPwaiting = 0; NPPturnaround = 0;
+	PSJFwaiting = 0; PSJFturnaround = 0;
+	PPwaiting = 0; PPturnaround = 0;
+	RRwaiting = 0; RRturnaround = 0;
+}
+*/
+void PrintEval(double AVGwaiting, double AVGturnaround) {
+
+	printf("Average Waiting Time = %lf \n", AVGwaiting/(double)processNum);
+	printf("Average Turnaround Time = %lf \n", AVGturnaround/(double)processNum);
 
 }
 
@@ -486,6 +511,8 @@ void FCFS() {
 
 	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		FCFSwaiting/(double)processNum, FCFSturnaround/(double)processNum);
 
 }
 
@@ -598,7 +625,8 @@ void NPSJF() {
 
 	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
-
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		NPSJFwaiting/(double)processNum, NPSJFturnaround/(double)processNum);
 }
 
 void NPPriority() {
@@ -710,7 +738,8 @@ void NPPriority() {
 
 	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
-
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		NPPwaiting/(double)processNum, NPPturnaround/(double)processNum);
 }
 
 void PSJF() {
@@ -810,7 +839,8 @@ void PSJF() {
 
 	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
-
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		PSJFwaiting/(double)processNum, PSJFturnaround/(double)processNum);
 }
 
 void PPriority() {
@@ -910,18 +940,129 @@ void PPriority() {
 
 	printf("**************************** Result ******************************\n\n");
 	PrintProcess(&endHead);
-
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		PPwaiting/(double)processNum, PPturnaround/(double)processNum);
 }
 
+void RR() {
+
+	SortByArrival(&head, &tail);
+
+	/* Process Queue */
+	PROCESS *processHead = NULL, *processTail = NULL;
+	PROCESS *processQueue = head, *node, *readyNode;
+
+	int time = 0, endNum = 0, timequantum = 0;
+	CPUstate = IDLE;
+
+	/* Initialize ReadyQueue */
+	readyHead = NULL;
+	readyTail = NULL;
+
+	/* Copy ProcessQueue */
+	CopyQueue(&processQueue, &processHead, &processTail);
+	printf("+----------------------------------------------------------------+\n");
+	printf("|                     Round Robin Scheduling                     |\n");
+	printf("+----------------------------------------------------------------+\n");	
+	printf("                      Enter quantum: ");
+	scanf("%d", &quantum);
+
+	printf("+----------------------------------------------------------------+\n");
+	printf("|                 Round Robin Scheduling Report                  |\n");
+	printf("+----------------------------------------------------------------+\n");
+	printf("************************** Gantt Chart ***************************\n\n");	
+
+	while(endNum < processNum) {
+	
+		processQueue = processHead;
+
+		/*  Insert ReadyQueue - Job Scheduling */
+		while(processQueue != NULL && processQueue->ArrivalTime == time) {
+			node = (PROCESS *)malloc(sizeof(PROCESS));
+			CopyNode(processQueue, node);
+			Enqueue(node, &readyHead, &readyTail);
+
+			/* remove job scheduled process from process list */
+			processQueue = processQueue->Next; 
+
+			/* next process */
+			processHead = processHead->Next;
+		}
+
+		if(CPUstate <= 0 || timequantum == 0) {
+
+			/* reinitiate quantum */
+			timequantum = quantum;
+
+			/* time expired - move to ready queue */
+			if(CPUstate > 0) {
+				node = (PROCESS *)malloc(sizeof(PROCESS));
+				CopyNode(readyHead, node);
+				Enqueue(node, &readyHead, &readyTail);
+				readyHead = readyHead->Next;
+			}
+			/* done */
+			else if(CPUstate == SCHEDULE) {
+				CPUstate = IDLE;
+				readyHead = readyHead->Next;
+			}
+			/* cpu scheduling */
+			if(readyHead != NULL) {
+				CPUstate = readyHead->ProcessID;
+			}
+		}
+
+		readyNode = readyHead;
+		while(readyNode != NULL) {
+
+			/* current executing process */
+			if(CPUstate == readyNode->ProcessID) {
+				printf("%d", readyNode->ProcessID);
+				/* end of execute */
+				if(readyNode->RemainTime == 1) {
+					readyNode->Turnaround = readyNode->WaitingTime + readyNode->ExecutingTime + 1;
+					RRwaiting += readyNode->WaitingTime;
+					RRturnaround += readyNode->Turnaround;
+					endNum++;
+					CPUstate = SCHEDULE;
+
+					node = (PROCESS *)malloc(sizeof(PROCESS));
+					CopyNode(readyNode, node);
+					Enqueue(node, &endHead, &endTail);				
+				}				
+				readyNode->ExecutingTime++;
+				readyNode->RemainTime--;
+				timequantum--;
+			}	
+
+			/* waiting process */
+			else {
+				readyNode->WaitingTime++;
+			}
+
+			readyNode = readyNode->Next;
+
+		}
+
+		if(readyHead==NULL && CPUstate==IDLE) {
+			printf(" ");
+		}
+
+		time++;
+	}
+
+	printf("\n\n");
+
+	printf("**************************** Result ******************************\n\n");
+	PrintProcess(&endHead);
+	printf("\n  average waiting time : %.2lf average turnaround time : %.2lf \n",
+		RRwaiting/(double)processNum, RRturnaround/(double)processNum);
+}
 
 int main(void) {
 
-	PROCESS *temp;
 	CreateProcess();
-	
-	temp = head;
-	PrintProcess(&temp);
-	PSJF();
+	Menu();
 	
 	return 0;
 
