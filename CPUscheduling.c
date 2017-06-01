@@ -1085,12 +1085,17 @@ void RR() {
 					endNum++;
 					CPUstate = SCHEDULE;
 
+					readyNode->ExecutingTime++;
+					readyNode->RemainTime--;
+
 					node = (PROCESS *)malloc(sizeof(PROCESS));
 					CopyNode(readyNode, node);
 					Enqueue(node, &endHead, &endTail);				
-				}				
-				readyNode->ExecutingTime++;
-				readyNode->RemainTime--;
+				}	
+				else {			
+					readyNode->ExecutingTime++;
+					readyNode->RemainTime--;
+				}
 				timequantum--;
 			}	
 
