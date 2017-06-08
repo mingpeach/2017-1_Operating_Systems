@@ -38,6 +38,7 @@ void Select(int select);
 void PrintProcess(PROCESS **head);
 void PrintEval();
 void PrintMin(int result);
+void InitEval();
 
 void SortByArrival(PROCESS **head, PROCESS **tail);
 void SortByBurst(PROCESS **head, PROCESS **tail);
@@ -83,24 +84,31 @@ void Select(int select) {
 
 	switch(select) {
 		case 1: 
+			InitEval();
 			FCFS();		
 			break;
 		case 2:
+			InitEval();
 			NPSJF();
 			break;
 		case 3:
+			InitEval();
 			PSJF();
 			break;
 		case 4:
+			InitEval();
 			NPPriority();
 			break;
 		case 5:
+			InitEval();
 			PPriority();
 			break;
 		case 6:
+			InitEval();
 			RR();
 			break;
 		case 7:
+			InitEval();		
 			FCFS();
 			NPSJF();
 			PSJF();
@@ -111,7 +119,7 @@ void Select(int select) {
 			break;
 		case 8:
 			//Exit
-			break;
+			exit(0);
 		default:
 			//Error
 			break;
@@ -256,6 +264,13 @@ void PrintMin(int result) {
 	}
 }
 
+void InitEval() {
+	int i;
+	for(i = 0; i < 6; i++) {
+		waiting[i] = 0;
+		turnaround [i] = 0;
+	}
+}
 
 void SortByArrival(PROCESS **head, PROCESS **tail) {
 
@@ -1126,7 +1141,9 @@ void RR() {
 int main(void) {
 
 	CreateProcess();
+	while(1) {
 	Menu();
+	}
 	
 	return 0;
 
